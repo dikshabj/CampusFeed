@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+//ENUMS:
+enum Role{
+  STUDENT //Can view feed , comment , make requests
+  FACULTY //can create posts, manage requests
+  ADMIN //can manage users
+}
+
+enum PostType {
+  NOTICE
+  EXAM
+  ASSIGNMENT
+  MATERIAL
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+enum RequestStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+//MODALS
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String
+  password String
+  role      Role   @default(STUDENT)
+  //profile fields
+  branch    String? 
+  semester   Int?
+
+  hashedRefreshToken String?
+
+  //relations
+  posts  Post[]
+  comments  Comment[]
+  requests  AcademicRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+
+}
+
+model Post{
+  id Int @id @default(autoincrement())
+  title String
+  description String
+  type  PostType @default(NOTICE)
+  status PostStatus @default(DRAFT)
+  isPriority Boolean @default(false)
+
+  targetBranch String?
+  targetSemester Int?
+
+  //relations
+  authorId Int
+  author User @relation(fields: [authorId], references: [id])
+  comments Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Comment{
+  id  Int @id @default(autoincrement())
+  content String
+
+  postId Int
+  post Post @relation(fields: [postId], references: [id])
+
+  authorId Int
+  author User @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+}
+
+model AcademicRequest {
+  id Int @id @default(autoincrement())
+  title String
+  description String
+  status RequestStatus @default(OPEN)
+
+  studentId Int
+  student User  @relation(fields: [studentId] , references:[id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
