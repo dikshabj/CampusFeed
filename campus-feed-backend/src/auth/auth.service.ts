@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +16,8 @@ export class AuthService {
     ){}
 
     //signup
-    async signup(dto : any){
+    async signup(dto : RegisterDto){
+        console.log(dto);
         //check if user exists
         const exists = await this.prisma.user.findUnique({
             where: {email: dto.email},
@@ -46,7 +49,7 @@ export class AuthService {
     }
 
     //login
-    async login(dto: any){
+    async login(dto: LoginDto){
         const user = await this.prisma.user.findUnique({
             where: {email: dto.email},
         });
