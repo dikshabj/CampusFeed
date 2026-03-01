@@ -1,10 +1,11 @@
-import { ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto, LoginDto, ResetPasswordDto } from './dto/login.dto';
+import { EmailService } from 'src/common/services/email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -13,11 +14,12 @@ export class AuthService {
         private prisma : PrismaService,
         private jwtService : JwtService,
         private config: ConfigService,
+        private emailService : EmailService,
     ){}
 
     //signup
     async signup(dto : RegisterDto){
-        console.log(dto);
+        //console.log(dto);
         //check if user exists
         const exists = await this.prisma.user.findUnique({
             where: {email: dto.email},
@@ -137,5 +139,83 @@ async getTokens(userId: number, role: string){
     
 
 }
+
+
+//forget password
+async forgotPassword(dto: ForgotPasswordDto){
+    const user = await this.prisma.user.findUnique({
+        where: {
+            email : dto.email
+        }
+    });
+    if(!user){
+        throw new BadRequestException('User with this email does not exist');
+    }
+    //generates otp
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    //set expiration time
+    const otpExpiresAt = new Date();
+    otpExpiresAt.setMinutes(otpExpiresAt.getMinutes() + 10);
+
+    //save otp to db
+    await this.prisma.user.update({
+        where : {email : user.email},
+        data : {otp , otpExpiresAt},
+    });
+
+    //send the email
+    await this.emailService.sendOtpEmail(user.email, otp);
+
+    return {message : 'OTP sent successfully to your email'}
+}
+
+//reset password
+async resetPassword(dto : ResetPasswordDto){
+    const user = await this.prisma.user.findUnique({
+        where : {
+            email : dto.email,
+        }
+    });
+
+    if(!user){
+        throw new BadRequestException('Invalid Request');
+
+    }
+
+    //check if otp matches
+    if(user.otp != dto.otp){
+        throw new BadRequestException('Invalid otp');
+
+    }
+
+    //check if otp is expired
+    if(user.otpExpiresAt && user.otpExpiresAt < new Date()){
+        throw new BadRequestException('Otp has expired!');
+    }
+
+    //hash the new password for security
+    const hashPassword = await bcrypt.hash(dto.newPassword , 10);
+
+    //update password and clear otp fields
+    await this.prisma.user.update({
+        where: {id : user.id},
+        data:{
+            password: hashPassword,
+            otp :null,
+            otpExpiresAt: null,
+        },
+    });
+
+    return{message : 'Password has been reset successfully'}
+}
+
+
+//email verification
+
+
+
+//google login
+
 }
     

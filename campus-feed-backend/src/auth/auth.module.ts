@@ -8,11 +8,13 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import passport from 'passport';
 import { AtStrategy } from './strategies/at.strategy';
 import { RtStrategy } from './strategies/rt.strategy';
+import { EmailModule } from 'src/common/services/email/email.module';
 @Module({
   imports : [
     PrismaModule,
     PassportModule,
     JwtModule.register({}),
+    EmailModule,
 
   ],
   controllers: [AuthController],
