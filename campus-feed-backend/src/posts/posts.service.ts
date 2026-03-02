@@ -65,6 +65,19 @@ export class PostsService {
                 //only fetch what we need
             });
 
+
+            //comment show
+            const feedIncludeQuery = {
+                author : {select : {name: true, role: true}},
+                //We tell Prisma to fetch the comments too!
+                comments: {
+                    include: {
+                        author: { select: { name: true, role: true } } // So we know WHO commented
+                    },
+                    orderBy: { createdAt: 'asc' } // Oldest comments at the top, like Instagram
+                }
+            };
+
             //if its factuly member lets show them all posts
             if(role === 'FACULTY'){
                 return await this.prisma.post.findMany({

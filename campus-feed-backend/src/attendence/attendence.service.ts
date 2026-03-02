@@ -10,19 +10,27 @@ export class AttendenceService {
     ) {}
 
     //teacher marks attendence
-    async markAttendence(studentId: number, subject: string, status: string){
+    async markAttendence(rollNumber: string, subject: string, status: string){
         const currentHour = new Date().getHours();
         if(currentHour >= 12){
             throw new BadRequestException('Portal locked : Attendence cannot be marked or updated after 12:00Am')
 
         }
+        const student = await this.prisma.user.findUnique({
+            where:{rollNumber:rollNumber}
+        });
+
+        if(!student || student.role!== 'STUDENT'){
+            throw new BadRequestException(`Student with Roll Number ${rollNumber} not found.`)
+        }
+
         const record = await this.prisma.attendence.create({
-            data : { studentId , subject , status},
+            data: { studentId: student.id, subject, status },
         });
 
         //instant alert
         if(status === 'ABSENT'){
-            this.notificationsGateway.server.emit(`attendence_alert_${studentId}`,{
+            this.notificationsGateway.server.emit(`attendence_alert_${student.id}`,{
                 message : `ALERT: You were marked ABSENT in ${subject}. You have until 12.00 AM to raise dispute!`,
                 attendenceId : record.id,
                 time : new Date().toISOString()
@@ -38,7 +46,8 @@ export class AttendenceService {
             throw new BadRequestException('Deadline Passed : Disputes can only be raised before 12:00 PM');
         }
         const record = await this.prisma.attendence.findUnique({
-            where : {id : attendenceId}
+            where : {id : attendenceId},
+            include : {student: true}
         });
         if(!record || record.studentId !== studentId){
             throw new BadRequestException('Invalid attendence record.');
@@ -57,7 +66,7 @@ export class AttendenceService {
 
         //alert teachers instantly
         this.notificationsGateway.server.emit('teacher_disputes',{
-            message : `New Dispute from Student ID ${studentId} for ${record.subject}. Reason: "${reason}"`,
+            message : `New Dispute from RollNo ${record.student.role} for ${record.subject}. Reason: "${reason}"`,
             disputeId : dispute.id
         });
 

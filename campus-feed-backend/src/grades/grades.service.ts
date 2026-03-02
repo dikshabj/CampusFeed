@@ -23,12 +23,24 @@ export class GradesService {
         file: Express.Multer.File,
         subject : string,
         maxMarks : number,
-        term : string
+        term : string,
     ){
         const validGrades : GradeCsvRow[] = [];
         //explicit type dena pda string ka cuz error arha tha
         const errors : string[] = [];
         let rowNumber = 1;
+
+        const allStudents = await this.prisma.user.findMany({
+            where : {role : 'STUDENT' , rollNumber : {not : null}},
+            select : {id : true , rollNumber : true}
+        })
+
+        const rollNumberToIdMap = new Map<string , number>();
+        allStudents.forEach((student) => {
+            if(student.rollNumber){
+                rollNumberToIdMap.set(student.rollNumber, student.id);
+            }
+        });
 
         const stream = Readable.from(file.buffer);
 
@@ -39,26 +51,36 @@ export class GradesService {
                 rowNumber++;
 
                 //smart validation error
-                const studentId = parseInt(row.studentId);
+                const rawRollNumber = row.rollNumber?.trim();
                 const marks = parseFloat(row.marks);
 
-                if(isNaN(studentId) || isNaN(marks)){
-                    errors.push(`Row ${rowNumber}: Invalid data format. ID and Marks must be numbers.`);
-                }else if(marks > maxMarks){
-                    errors.push(`Row ${rowNumber} : Marks (${marks}) cannot exceed MaxMarks (${maxMarks}).`)
-                }else if(marks < 0){
-                    errors.push(`Row ${rowNumber} : Marks cannot be negative.`);
-
-                }else{
-                    validGrades.push({
-                        studentId,
-                        subject,
-                        marks,
-                        maxMarks,
-                        term,
-
-                    });
+                if(!rawRollNumber){
+                    errors.push(`Row ${rowNumber}: Roll no is missing`);
                 }
+                if(isNaN(marks)){
+                    errors.push(`Row ${rowNumber} : Marks must be valid number.`);
+                    return;
+                }
+
+                const mappedStudentId = rollNumberToIdMap.get(rawRollNumber);
+
+                if(!mappedStudentId){
+                    errors.push(`Row ${rowNumber}: Student with Roll Number ${rawRollNumber} not found in database.`)
+                }else if(marks > maxMarks){
+                    errors.push(`Row ${rowNumber}: Marks (${marks}) cannot exceed MaxMarks (${maxMarks}).`)
+                }else if(marks < 0){
+                    errors.push(`Row ${rowNumber}: Marks cannot be negative.`);
+                }else {
+                    validGrades.push({
+                 studentId: mappedStudentId,
+                 subject: subject,
+                 marks: marks,
+                 maxMarks : maxMarks,
+                term: term,
+            });
+                }
+                    
+                
             })
             .on('end', async()=>{
                 try {
@@ -91,10 +113,12 @@ export class GradesService {
     }
 
     //fetch my grades
-    async getMyGrades(studentId: number){
+    async getMyGrades(rollNumber: string){
         const grades = await this.prisma.grade.findMany({
             where : {
-                studentId : studentId
+                student : {
+                    rollNumber : rollNumber
+                }
             },
             orderBy: {
                 createdAt : 'desc'

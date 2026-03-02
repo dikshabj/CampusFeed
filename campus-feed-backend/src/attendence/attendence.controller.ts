@@ -1,5 +1,6 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { AttendenceService } from './attendence.service';
+import { AtGuard } from 'src/common/guards/at.guard';
 
 @Controller('attendence')
 export class AttendenceController {
@@ -8,20 +9,23 @@ export class AttendenceController {
     //for teachers to mark attendence
     @Post('mark')
     async markAttendence(
-        @Body('studentId') studentId : number,
+        @Body('rollNumber') rollNumber : string,
         @Body('subject') subject: string,
         @Body('status') status : string
     ){
-        return this.attendenceService.markAttendence(Number(studentId), subject , status.toUpperCase());
+        return this.attendenceService.markAttendence(rollNumber, subject , status.toUpperCase());
     }
 
     //for student to raise a dispute
+    @UseGuards(AtGuard)
     @Post('dispute')
     async raiseDispute(
-        @Body('studentId') studentId : number,
+        @Req() req: Request,
+        
         @Body('attendenceId') attendenceId : number,
         @Body('reason') reason: string
     ){
-        return this.attendenceService.raiseDispute(Number(studentId), Number(attendenceId), reason)
+        const user = (req as any).user;
+        return this.attendenceService.raiseDispute(user.sub, Number(attendenceId), reason)
     }
 }
