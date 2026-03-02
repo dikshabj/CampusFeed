@@ -13,6 +13,7 @@ import { GradesService } from './grades/grades.service';
 import { GradesController } from './grades/grades.controller';
 import { GradesModule } from './grades/grades.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AttendenceModule } from './attendence/attendence.module';
 
 
 @Module({
@@ -28,7 +29,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     EmailModule,
     AwsModule,
     GradesModule,
-    NotificationsModule],
+    NotificationsModule,
+    AttendenceModule],
   controllers: [AppController, GradesController],
   providers: [AppService, EmailService, GradesService],
   exports:[EmailService],

@@ -48,4 +48,16 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   rollNumber?: string; 
+
+  @IsOptional()
+  @IsString()
+  teacherId? : string;
+
+  @IsOptional()
+  @IsString()
+  batch? : string;
+
+  @IsOptional()
+  @IsString()
+  section?: string;
 }

@@ -47,6 +47,20 @@ model User {
   name  String
   password String
   role      Role   @default(STUDENT)
+
+  //login dtos
+  rollNumber String? @unique
+  teacherId String? @unique
+
+  batch String?
+  section String?
+
+  mentorId Int?
+  mentor User? @relation("StudentMentor", fields : [mentorId], references: [id])
+
+  mentees User[] @relation("StudentMentor")
+
+
   //profile fields
   branch    String? 
   semester   Int?
@@ -159,7 +173,7 @@ model Attendence {
 model Dispute{
   id Int @id @default(autoincrement())
   reason String 
-  status String
+  status String @default("pending")
 
   attendenceId Int @unique
   attendence Attendence @relation(fields : [attendenceId] , references : [id])

@@ -19,10 +19,23 @@ export class AuthService {
 
     //signup
     async signup(dto : RegisterDto){
+        //roll number check
+        if (dto.role === 'STUDENT' && !dto.rollNumber) {
+      throw new BadRequestException("Students must provide a valid Roll Number to register.");
+    }
+    if (dto.role === 'FACULTY' && !dto.teacherId) {
+      throw new BadRequestException("Faculty members must provide a Teacher ID to register.");
+    }
         //console.log(dto);
         //check if user exists
-        const exists = await this.prisma.user.findUnique({
-            where: {email: dto.email},
+        const exists = await this.prisma.user.findFirst({
+            where: {
+                OR:[
+              {  email: dto.email},
+              {rollNumber : dto.rollNumber || undefined},
+              {teacherId : dto.teacherId || undefined}
+                ]
+            }
         });
         if(exists) throw new ConflictException('User already exists');
 
@@ -38,9 +51,17 @@ export class AuthService {
                 role : dto.role || 'STUDENT',
                 branch : dto.branch,
                 semester : dto.semester ? Number(dto.semester) : null,
+                batch: dto.batch,
+                section: dto.section,
+        // Only save specific IDs based on their role
+                rollNumber: dto.role === 'STUDENT' ? dto.rollNumber : null,
+                teacherId: dto.role === 'FACULTY' ? dto.teacherId : null,
 
             },
         });
+
+       
+
 
         //generate tokens immediately
         const tokens = await this.getTokens(newUser.id, newUser.role);
@@ -52,8 +73,15 @@ export class AuthService {
 
     //login
     async login(dto: LoginDto){
-        const user = await this.prisma.user.findUnique({
-            where: {email: dto.email},
+        const user = await this.prisma.user.findFirst({
+            where: {
+                OR:[
+               {email : dto.loginIdentifier},
+               {rollNumber : dto.loginIdentifier},
+               {teacherId : dto.loginIdentifier}
+                ]
+
+            },
         });
         if(!user) throw new UnauthorizedException('Invalid Credentials');
 

@@ -1,9 +1,14 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
-  @IsEmail({}, { message: 'Please enter a valid email address' }) // ✨ Email check karega
+  @IsString({message : 'Please enter a valid email, rollno , or teacher id'})
+  @IsNotEmpty({message : 'Identifer cannot be empty'})
+  loginIdentifier : string;
+
+
+  /* @IsEmail({}, { message: 'Please enter a valid email address' }) // ✨ Email check karega
   @IsNotEmpty()
-  email: string;
+  email: string; */
 
   @IsString()
   @IsNotEmpty()
