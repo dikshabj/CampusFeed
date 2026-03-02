@@ -5,11 +5,13 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { AwsService } from 'src/aws/aws.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { NotificationsGateway } from 'src/notifications/notifications.gateway';
 
 @Injectable()
 export class PostsService {
     constructor(private prisma : PrismaService,
-        private awsService : AwsService
+        private awsService : AwsService,
+        private notificationsGateway : NotificationsGateway
     ){}
     
     async createPost(userId: number, dto:createPostDto, file?: Express.Multer.File){
@@ -39,6 +41,8 @@ export class PostsService {
 
                 }
             });
+
+            this.notificationsGateway.sendNewPostAlert(newPost.title , newPost.type);
 
             return {
                 message : 'Post created successfully',
@@ -178,6 +182,6 @@ export class PostsService {
         });
 
         return {message : 'Comment added successfully' , comment};
-        
+
     }
 }

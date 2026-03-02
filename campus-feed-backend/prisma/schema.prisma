@@ -62,6 +62,12 @@ model User {
   posts  Post[]
   comments  Comment[]
   requests  AcademicRequest[]
+  
+  //for grades
+  grades    Grade[]
+
+  //attendence
+  attendences Attendence[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -119,4 +125,44 @@ model AcademicRequest {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Grade{
+  id Int @id @default(autoincrement())
+  subject String 
+  marks Float
+  maxMarks Float
+  term String
+
+  studentId Int
+  student User @relation(fields: [studentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Attendence {
+  id Int @id @default(autoincrement())
+  date DateTime @default(now())
+  subject String 
+  status String
+
+  //link to the students
+  studentId Int
+  student User @relation(fields: [studentId] , references : [id])
+  dispute Dispute?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model Dispute{
+  id Int @id @default(autoincrement())
+  reason String 
+  status String
+
+  attendenceId Int @unique
+  attendence Attendence @relation(fields : [attendenceId] , references : [id])
+
+  createdAt DateTime @default(now())
 }

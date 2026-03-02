@@ -9,6 +9,10 @@ import { PrismaModule } from './prisma/prisma.module';
 import { EmailService } from './common/services/email/email.service';
 import { EmailModule } from './common/services/email/email.module';
 import { AwsModule } from './aws/aws.module';
+import { GradesService } from './grades/grades.service';
+import { GradesController } from './grades/grades.controller';
+import { GradesModule } from './grades/grades.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 
 @Module({
@@ -22,9 +26,11 @@ import { AwsModule } from './aws/aws.module';
     PostsModule,
     PrismaModule,
     EmailModule,
-    AwsModule],
-  controllers: [AppController],
-  providers: [AppService, EmailService],
+    AwsModule,
+    GradesModule,
+    NotificationsModule],
+  controllers: [AppController, GradesController],
+  providers: [AppService, EmailService, GradesService],
   exports:[EmailService],
 })
 export class AppModule {}
