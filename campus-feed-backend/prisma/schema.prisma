@@ -15,168 +15,216 @@ datasource db {
 }
 
 
-//ENUMS:
-enum Role{
-  STUDENT //Can view feed , comment , make requests
-  FACULTY //can create posts, manage requests
-  ADMIN //can manage users
+// --- ENUMS ---
+enum Role {
+  STUDENT
+  FACULTY
+  ADMIN
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum DisputeStatus {
+  OPEN
+  APPROVED
+  REJECTED
+}
+
+enum ExamType {
+  MST1
+  MST2
+  FINAL
 }
 
 enum PostType {
   NOTICE
-  EXAM
   ASSIGNMENT
-  MATERIAL
+  RESULT
+  GENERAL
 }
 
-enum PostStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-enum RequestStatus {
-  OPEN
-  IN_PROGRESS
-  RESOLVED
-  REJECTED
-}
-//MODALS
+// --- MODELS ---
+
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String
-  password String
-  role      Role   @default(STUDENT)
-
-  //login dtos
-  rollNumber String? @unique
-  teacherId String? @unique
-
-  batch String?
-  section String?
-
-  mentorId Int?
-  mentor User? @relation("StudentMentor", fields : [mentorId], references: [id])
-
-  mentees User[] @relation("StudentMentor")
-
-
-  //profile fields
-  branch    String? 
-  semester   Int?
-
-  hashedRefreshToken String?
-
-  //forget pass
-  isEmailVerified Boolean @default(false)
-  otp  String?
-  otpExpiresAt DateTime?
-
-  //relations
-  posts  Post[]
-  comments  Comment[]
-  requests  AcademicRequest[]
+  id              Int       @id @default(autoincrement())
+  email           String    @unique
+  password        String
+  role            Role      @default(STUDENT)
+  name            String
+  rollNumber      String?   @unique 
+  facultyId       String?   @unique 
+  profileImageUrl String?
   
-  //for grades
-  grades    Grade[]
-
-  //attendence
-  attendences Attendence[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-
-}
-
-model Post{
-  id Int @id @default(autoincrement())
-  title String
-  description String
-  type  PostType @default(NOTICE)
-  status PostStatus @default(DRAFT)
-  isPriority Boolean @default(false)
-
-  //for s3 aws
-  attachmentUrl String?
-  attachmentType String?
+  // Relations
+  batchId         Int?
+  batch           Batch?    @relation("StudentBatch", fields: [batchId], references: [id])
   
+  mentoredBatches Batch[]   @relation("BatchMentor")
+  subjects        Subject[] @relation("FacultySubjects")
+  sessions        AttendanceSession[]
+  records         AttendanceRecord[]
+  disputesRaised  AttendanceDispute[] @relation("DisputeRaiser")
+  disputesResolved AttendanceDispute[] @relation("DisputeResolver")
+  marksUploaded   Mark[]    @relation("MarksUploader")
+  marksReceived   Mark[]    @relation("StudentMarks")
+  posts           Post[]
 
-  targetBranch String?
-  targetSemester Int?
+  createdAt       DateTime  @default(now())
 
-  //relations
-  authorId Int
-  author User @relation(fields: [authorId], references: [id])
-  comments Comment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([role])
 }
 
-model Comment{
-  id  Int @id @default(autoincrement())
-  content String
+model Batch {
+  id        Int       @id @default(autoincrement())
+  branch    String
+  semester  Int
+  section   String
 
-  postId Int
-  post Post @relation(fields: [postId], references: [id])
+  mentorId  Int?
+  mentor    User?     @relation("BatchMentor", fields: [mentorId], references: [id])
 
-  authorId Int
-  author User @relation(fields: [authorId], references: [id])
+  students  User[]    @relation("StudentBatch")
+  subjects  Subject[]
+  timetables Timetable[]
+  posts     Post[]
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
+  @@unique([branch, semester, section]) // Ensures no duplicate batches exist
+  @@index([branch, semester, section])
 }
 
-model AcademicRequest {
-  id Int @id @default(autoincrement())
-  title String
-  description String
-  status RequestStatus @default(OPEN)
+model Subject {
+  id        Int       @id @default(autoincrement())
+  name      String
+  code      String    @unique
+  
+  batchId   Int
+  batch     Batch     @relation(fields: [batchId], references: [id])
+  
+  facultyId Int
+  faculty   User      @relation("FacultySubjects", fields: [facultyId], references: [id])
 
-  studentId Int
-  student User  @relation(fields: [studentId] , references:[id])
+  timetables Timetable[]
+  sessions   AttendanceSession[]
+  marks      Mark[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([batchId])
+  @@index([facultyId])
 }
 
-model Grade{
-  id Int @id @default(autoincrement())
-  subject String 
-  marks Float
-  maxMarks Float
-  term String
+model Timetable {
+  id        Int       @id @default(autoincrement())
+  
+  batchId   Int
+  batch     Batch     @relation(fields: [batchId], references: [id])
+  
+  subjectId Int
+  subject   Subject   @relation(fields: [subjectId], references: [id])
+  
+  dayOfWeek String    // e.g., "MONDAY", "TUESDAY"
+  startTime String    // e.g., "09:00"
+  endTime   String    // e.g., "10:00"
 
-  studentId Int
-  student User @relation(fields: [studentId], references: [id])
-
-  createdAt DateTime @default(now())
+  @@index([batchId])
+  @@index([dayOfWeek])
 }
 
-model Attendence {
-  id Int @id @default(autoincrement())
-  date DateTime @default(now())
-  subject String 
-  status String
+model AttendanceSession {
+  id        Int       @id @default(autoincrement())
+  date      DateTime  @default(now()) @db.Date // Stores only the date portion
+  
+  subjectId Int
+  subject   Subject   @relation(fields: [subjectId], references: [id])
+  
+  createdBy Int
+  faculty   User      @relation(fields: [createdBy], references: [id])
 
-  //link to the students
-  studentId Int
-  student User @relation(fields: [studentId] , references : [id])
-  dispute Dispute?
+  records   AttendanceRecord[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+
+  @@unique([subjectId, date]) // Only one session per subject per day
 }
 
+model AttendanceRecord {
+  id          Int               @id @default(autoincrement())
+  status      AttendanceStatus
+  
+  sessionId   Int
+  session     AttendanceSession @relation(fields: [sessionId], references: [id])
+  
+  studentId   Int
+  student     User              @relation(fields: [studentId], references: [id])
 
-model Dispute{
-  id Int @id @default(autoincrement())
-  reason String 
-  status String @default("pending")
+  disputes    AttendanceDispute[]
 
-  attendenceId Int @unique
-  attendence Attendence @relation(fields : [attendenceId] , references : [id])
+  @@unique([sessionId, studentId]) // A student can only have one record per session
+  @@index([studentId])
+  @@index([sessionId])
+}
 
-  createdAt DateTime @default(now())
+model AttendanceDispute {
+  id                 Int              @id @default(autoincrement())
+  message            String
+  status             DisputeStatus    @default(OPEN)
+  
+  attendanceRecordId Int
+  record             AttendanceRecord @relation(fields: [attendanceRecordId], references: [id])
+  
+  raisedBy           Int
+  student            User             @relation("DisputeRaiser", fields: [raisedBy], references: [id])
+  
+  resolvedBy         Int?
+  faculty            User?            @relation("DisputeResolver", fields: [resolvedBy], references: [id])
+
+  createdAt          DateTime         @default(now())
+
+  @@index([attendanceRecordId])
+  @@index([raisedBy])
+}
+
+model Mark {
+  id          Int       @id @default(autoincrement())
+  examType    ExamType
+  marksObtained Float
+  maxMarks    Float
+  
+  studentId   Int
+  student     User      @relation("StudentMarks", fields: [studentId], references: [id])
+  
+  subjectId   Int
+  subject     Subject   @relation(fields: [subjectId], references: [id])
+  
+  uploadedBy  Int
+  faculty     User      @relation("MarksUploader", fields: [uploadedBy], references: [id])
+
+  createdAt   DateTime  @default(now())
+
+  @@unique([studentId, subjectId, examType]) // Prevents duplicate MST1 entries for the same subject
+  @@index([studentId])
+  @@index([subjectId])
+}
+
+model Post {
+  id          Int       @id @default(autoincrement())
+  title       String
+  content     String
+  type        PostType  @default(GENERAL)
+  
+  authorId    Int
+  author      User      @relation(fields: [authorId], references: [id])
+  
+  batchId     Int?
+  batch       Batch?    @relation(fields: [batchId], references: [id])
+
+  expiryDate  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([batchId])
+  @@index([createdAt])
+  @@index([expiryDate])
 }

@@ -6,22 +6,18 @@ import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { EmailService } from './common/services/email/email.service';
 import { EmailModule } from './common/services/email/email.module';
 import { AwsModule } from './aws/aws.module';
-import { GradesService } from './grades/grades.service';
-import { GradesController } from './grades/grades.controller';
 import { GradesModule } from './grades/grades.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AttendenceModule } from './attendence/attendence.module';
-
+import { TimetableModule } from './timetable/timetable.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    
     AuthModule,
     UsersModule,
     PostsModule,
@@ -30,9 +26,11 @@ import { AttendenceModule } from './attendence/attendence.module';
     AwsModule,
     GradesModule,
     NotificationsModule,
-    AttendenceModule],
-  controllers: [AppController, GradesController],
-  providers: [AppService, EmailService, GradesService],
-  exports:[EmailService],
+    AttendenceModule,
+    TimetableModule
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+  exports: [],
 })
-export class AppModule {}
+export class AppModule { }
